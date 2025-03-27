@@ -1,0 +1,8 @@
+Clock seem obvious at first.
+
+TOD maintain the time of day and timezone etc.
+ROUNDROBIN Select a task to run if its on the round robin timer.
+CHECKEVENS check the event queue to see if any timers have popped.
+
+And so on.
+

@@ -1,0 +1,8 @@
+I want to use fat32 file system.  The question is will it fit in the ram
+space I have.  It should but other things may suffer.
+
+We should have the file system be compound so CP/M can be a file system
+within the FAT32 file system.  Fat does not need to know details about
+CP/M file system and viseversa ...  we shall see
+
+

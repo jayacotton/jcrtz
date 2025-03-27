@@ -1,0 +1,7 @@
+This is the interface to the kernel code.  
+
+user applications can call parts of the kernel for memory/io/timer etc 
+functions via this library.  Each entry point will be detailed
+and include examples  (i hope)
+
+

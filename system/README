@@ -1,0 +1,14 @@
+O.k. so here is where the rubber hits the road.
+
+We need to arbitrate between each runnable task, sort out the interrupts
+and vectors, and switch in the task that is waiting for and event.
+
+What events are there:
+
+1.  I/O completion event.  I.e.  Read/Write a device either byte or record
+2.  Timer event pops.  i.e. Sleep/wake up TOD or wait time out.
+
+Keeps the user memory organized and keep the i/o system pointed in the
+correct direction.
+
+

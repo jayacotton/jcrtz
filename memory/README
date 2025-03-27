@@ -1,0 +1,13 @@
+The memory is not really all that simple.
+
+First we have 64kb of address range.  Next I need a small bit of code 
+at the top of memory to help with page switching.
+
+Next we need to nail down the page size.  And deal with swapping.  
+Or not....
+
+
+How may tasks can be running at one time...  1, how many can the 
+system support.... maybe 16 
+
+

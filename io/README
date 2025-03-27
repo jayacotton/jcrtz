@@ -1,0 +1,12 @@
+The io system is disk enet serial printer 
+
+Could add tape, but don't know what device to plan for.
+
+The console code v0 is ready.  Note that the code does interact well with
+RomWBW interrupt vector code.  Our operational version will have to rewrite
+the handler.  Also we need to monitor the rx interrupt bit in the status
+register.  For now this code gets the console up and running.
+
+
+
+
