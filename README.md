@@ -10,4 +10,9 @@ Most of the documentation will be in C with semi colons at the end.  I will be d
 plane text as I go along.  Most of the interesting documents will be in the sub directories 
 with the code.
 
+I am including the FAT file code base with a few minor tweeks for the special case of disk driver.
+
+Also looking at busybox code as a possible way to get to a working command set quickly.  Size is an
+issue however.
+
 
