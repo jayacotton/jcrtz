@@ -51,7 +51,7 @@ int Count;
 }
 /* due to a lack of imagination the console character i/o code is 
 here.  In the future, this will require abstraction to allow for
-a variaty of sio drivers. */
+a variety of sio drivers. */
 
 /* since I am building and running on an rc2014 with a KIO chip.  
 Interrupt mode 2  I think copy the driver from ROMWbW.  */
