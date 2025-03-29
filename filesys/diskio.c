@@ -1,5 +1,5 @@
 /*-----------------------------------------------------------------------*/
-/* Low level disk I/O module SKELETON for FatFs     (C)ChaN, 2019        */
+/* Low level disk I/O module skeleton for FatFs     (C)ChaN, 2016        */
 /*-----------------------------------------------------------------------*/
 /* If a working storage control module is available, it should be        */
 /* attached to the FatFs via a glue function rather than modifying it.   */
@@ -7,14 +7,21 @@
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
 
-#include "ff.h"			/* Obtains integer types */
-#include "diskio.h"		/* Declarations of disk functions */
+#include <stdio.h>
+#include <string.h>
 
-/* Definitions of physical drive number for each drive */
-#define DEV_RAM		0	/* Example: Map Ramdisk to physical drive 0 */
-#define DEV_MMC		1	/* Example: Map MMC/SD card to physical drive 1 */
-#define DEV_USB		2	/* Example: Map USB MSD to physical drive 2 */
+#include "bios.h"
 
+#include "diskio.h"		/* FatFs lower layer API */
+
+typedef struct {
+	unsigned char year;
+	unsigned char month;
+	unsigned char date;
+	unsigned char hour;
+	unsigned char minute;
+	unsigned char second;
+} TIME;
 
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
@@ -24,32 +31,11 @@ DSTATUS disk_status (
 	BYTE pdrv		/* Physical drive nmuber to identify the drive */
 )
 {
-	DSTATUS stat;
-	int result;
+	pdrv;
 
-	switch (pdrv) {
-	case DEV_RAM :
-		result = RAM_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case DEV_MMC :
-		result = MMC_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case DEV_USB :
-		result = USB_disk_status();
-
-		// translate the reslut code here
-
-		return stat;
-	}
-	return STA_NOINIT;
+	// printf("\ndisk_status()");
+	
+	return RES_OK;		// Assume disk is ready
 }
 
 
@@ -62,32 +48,19 @@ DSTATUS disk_initialize (
 	BYTE pdrv				/* Physical drive nmuber to identify the drive */
 )
 {
-	DSTATUS stat;
-	int result;
+	REGS reg;
+	
+	// printf("\ndisk_initialize()");
+	
+	reg.b.B = 0x18;		// HBIOS Media Discovery
+	reg.b.C = pdrv;
+	reg.w.DE = 0x0001;	// Set bit E:0 for media discovery
+	reg.w.HL = 0;
+	bioscall(&reg, &reg);
+	
+	// printf("\nHBIOS Media = %u, Type=%u", reg.b.A, reg.b.E);
 
-	switch (pdrv) {
-	case DEV_RAM :
-		result = RAM_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case DEV_MMC :
-		result = MMC_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-
-	case DEV_USB :
-		result = USB_disk_initialize();
-
-		// translate the reslut code here
-
-		return stat;
-	}
-	return STA_NOINIT;
+	return reg.b.A ? RES_NOTRDY : RES_OK;
 }
 
 
@@ -99,43 +72,35 @@ DSTATUS disk_initialize (
 DRESULT disk_read (
 	BYTE pdrv,		/* Physical drive nmuber to identify the drive */
 	BYTE *buff,		/* Data buffer to store read data */
-	LBA_t sector,	/* Start sector in LBA */
+	DWORD sector,	/* Start sector in LBA */
 	UINT count		/* Number of sectors to read */
 )
 {
-	DRESULT res;
-	int result;
+	REGS reg;
+	
+	//printf("\ndisk_read(%u, %lu, %u)", pdrv, sector, count);
+	
+	reg.b.B = 0x12;		// HBIOS Seek
+	reg.b.C = pdrv;
+	reg.w.DE = (WORD)(sector>>16);
+	reg.w.HL = (WORD)sector;
+	reg.b.D |= 0x80;		// High bit signifies LBA address
+	bioscall(&reg, &reg);
+	
+	//printf("\nHBIOS Seek = %u", reg.b.A);
 
-	switch (pdrv) {
-	case DEV_RAM :
-		// translate the arguments here
-
-		result = RAM_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case DEV_MMC :
-		// translate the arguments here
-
-		result = MMC_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case DEV_USB :
-		// translate the arguments here
-
-		result = USB_disk_read(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
+	if (reg.b.A == 0)
+	{
+		reg.b.B = 0x13;		// HBIOS Read
+		reg.b.C = pdrv;
+		reg.w.DE = count;
+		reg.w.HL = (WORD)buff;
+		bioscall(&reg, &reg);
+		
+		//printf("\nHBIOS Read = %u", reg.b.A);
 	}
 
-	return RES_PARERR;
+	return reg.b.A ? RES_ERROR : RES_OK;
 }
 
 
@@ -144,51 +109,40 @@ DRESULT disk_read (
 /* Write Sector(s)                                                       */
 /*-----------------------------------------------------------------------*/
 
-#if FF_FS_READONLY == 0
-
 DRESULT disk_write (
 	BYTE pdrv,			/* Physical drive nmuber to identify the drive */
 	const BYTE *buff,	/* Data to be written */
-	LBA_t sector,		/* Start sector in LBA */
+	DWORD sector,		/* Start sector in LBA */
 	UINT count			/* Number of sectors to write */
 )
 {
-	DRESULT res;
-	int result;
+	REGS reg;
+	
+	//printf("\ndisk_write(%uc, %ul, %u)", pdrv, sector, count);
 
-	switch (pdrv) {
-	case DEV_RAM :
-		// translate the arguments here
+	reg.b.B = 0x12;		// HBIOS Seek
+	reg.b.C = pdrv;
+	reg.w.DE = (WORD)(sector>>16);
+	reg.w.HL = (WORD)sector;
+	reg.b.D |= 0x80;		// High bit signifies LBA address
+	bioscall(&reg, &reg);
+	
+	//printf("\nHBIOS Seek = %u", reg.b.A);
 
-		result = RAM_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case DEV_MMC :
-		// translate the arguments here
-
-		result = MMC_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
-
-	case DEV_USB :
-		// translate the arguments here
-
-		result = USB_disk_write(buff, sector, count);
-
-		// translate the reslut code here
-
-		return res;
+	if (reg.b.A == 0)
+	{
+		reg.b.B = 0x14;		// HBIOS Read
+		reg.b.C = pdrv;
+		reg.w.DE = count;
+		reg.w.HL = (WORD)buff;
+		bioscall(&reg, &reg);
+		
+		//printf("\nHBIOS Write = %u", reg.b.A);
 	}
 
-	return RES_PARERR;
+	return reg.b.A ? RES_ERROR : RES_OK;
 }
 
-#endif
 
 
 /*-----------------------------------------------------------------------*/
@@ -201,29 +155,78 @@ DRESULT disk_ioctl (
 	void *buff		/* Buffer to send/receive control data */
 )
 {
-	DRESULT res;
-	int result;
+	pdrv;
+	cmd;
+	buff;
+	
+	//printf("\ndisk_ioctl(%uc, %uc)", pdrv, cmd);
 
-	switch (pdrv) {
-	case DEV_RAM :
-
-		// Process of the command for the RAM drive
-
-		return res;
-
-	case DEV_MMC :
-
-		// Process of the command for the MMC/SD card
-
-		return res;
-
-	case DEV_USB :
-
-		// Process of the command the USB drive
-
-		return res;
+	switch (cmd)
+	{
+		case CTRL_SYNC:
+			return RES_OK;
+		
+		case GET_SECTOR_COUNT:
+			*((DWORD *)buff) = ((DWORD)1024*16*16);
+			return RES_OK;
+		
+		case GET_SECTOR_SIZE:
+			*((WORD *)buff) = 512;
+			return RES_OK;
+		
+		case GET_BLOCK_SIZE:
+			*((DWORD *)buff) = 512;
+			return RES_OK;
+		
+		case CTRL_TRIM:
+			return RES_OK;
 	}
 
 	return RES_PARERR;
 }
 
+/*-------------------------------------------------------------------*/
+/* User Provided RTC Function for FatFs module                       */
+/*-------------------------------------------------------------------*/
+/* This is a real time clock service to be called from FatFs module. */
+/* This function is needed when FF_FS_READONLY == 0 and FF_FS_NORTC == 0 */
+
+BYTE bcd2bin(BYTE val)
+{
+	return (((val >> 4) * 10) + (val & 0x0F));
+}
+
+DWORD get_fattime (void)
+{
+	REGS reg;
+	TIME time;
+	DWORD fattime;
+	
+	reg.b.B = 0x20;		// HBIOS RTC Get Time
+	reg.w.HL = (WORD)&time;
+	bioscall(&reg, &reg);
+	
+	/* Pack date and time into a DWORD variable */
+	if (reg.b.A == 0)
+	{
+		fattime = 0;
+		fattime |= (((DWORD)bcd2bin(time.year) + 20) << 25);
+		fattime |= ((DWORD)bcd2bin(time.month) << 21);
+		fattime |= ((DWORD)bcd2bin(time.date) << 16);
+		fattime |= ((WORD)bcd2bin(time.hour) << 11);
+		fattime |= ((WORD)bcd2bin(time.minute) << 5);
+		fattime |= ((WORD)bcd2bin(time.second) >> 1);
+	}
+	else
+	{
+		fattime = 0;
+		fattime |= ((DWORD)(2017 - 1980) << 25);
+		fattime |= ((DWORD)9 << 21);
+		fattime |= ((DWORD)21 << 16);
+		fattime |= (WORD)(18 << 11);
+		fattime |= (WORD)(44 << 5);
+		fattime |= (WORD)(15 >> 1);
+	}
+	
+	return fattime;
+}
